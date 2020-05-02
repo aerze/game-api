@@ -18,9 +18,7 @@ const CLIENT = {
  */
 function handleCreateGame(socket, { lobbyName, playerName }, ack) {
   console.log(
-    `main:handleCreateGame(Socket: ${
-      socket.id
-    }, { lobbyName: ${lobbyName}, playerName: ${playerName}})`
+    `main:handleCreateGame(Socket: ${socket.id}, { lobbyName: ${lobbyName}, playerName: ${playerName}})`
   );
 
   const player = PlayerActions.createPlayer(playerName, socket);
@@ -28,7 +26,7 @@ function handleCreateGame(socket, { lobbyName, playerName }, ack) {
   GameActions.setPlayerAsHost(game, player);
   GameActions.addPlayerToGame(game, player);
 
-  ack({ game, player });
+  GameActions.messagePlayer(player, "GAME_CREATED", { game, player });
 }
 
 /**
@@ -45,8 +43,8 @@ function handleJoinGame(socket, { gameId, playerName }, ack) {
   const player = PlayerActions.createPlayer(playerName, socket);
   const game = GameActions.findGameById(gameId);
   GameActions.addPlayerToGame(game, player);
-  GameActions.messageRoom(game);
-  ack({ game, player });
+  GameActions.messageRoom(game, "PLAYER_JOINED", { game });
+  GameActions.messagePlayer(player, "GAME_JOINED", { player });
 }
 
 /**
@@ -59,9 +57,7 @@ function handlePlayerReady({ gameId, playerId }, ack) {
   const game = GameActions.findGameById(gameId);
   const player = GameActions.findPlayerInGame(game, playerId);
   GameActions.setPlayerAsReady(player);
-  GameActions.messageRoom(game);
-  GameActions.checkPlayersReady(game);
-  ack({ game, player });
+  GameActions.messageRoom(game, "PLAYER_IS_READY", { game });
 }
 
 /**
@@ -77,9 +73,7 @@ function handlePlayerScore({ gameId, playerId, score }, ack) {
   const player = GameActions.findPlayerInGame(game, playerId);
   GameActions.addPlayerScore(player, score);
   GameActions.setPlayerAsReady(player);
-  GameActions.messageRoom(game);
-  GameActions.checkPlayersReady(game);
-  ack({ game, player });
+  GameActions.messageRoom(game, "SET_PLAYER_SCORE");
 }
 
 /**
@@ -105,14 +99,15 @@ async function loop(game) {
   console.log(`main:loop(Game: ${game.id})`);
   GameActions.pushRoomToState(game, "SCORE");
   GameActions.setAllPlayersUnready(game);
-  GameActions.messageRoom(game);
+  GameActions.messageRoom(game, "MOVE_TO_SCOREBOARD", { game });
   console.log(`main:loop(Game: ${game.id}) // pushed to SCORE, starting timeout`);
+
   await GameActions.allPlayersReady(game, 5 * 1000);
   console.log(`main:loop(Game: ${game.id}) // all players ready`);
 
   GameActions.pushRoomToState(game, "GAME");
   GameActions.setAllPlayersUnready(game);
-  GameActions.messageRoom(game);
+  GameActions.messageRoom(game, "MOVE_TO_GAME", { game });
   console.log(`main:loop(Game: ${game.id}) // pushed to GAME, waiting for scores`);
 
   await GameActions.allPlayersReady(game, 30 * 1000);
@@ -122,11 +117,12 @@ async function loop(game) {
     console.log(`main:loop(Game: ${game.id}) // has winner`);
 
     GameActions.pushRoomToState(game, "RESULTS");
+    GameActions.messageRoom(game, "MOVE_TO_RESULTS", { game });
     console.log(`main:loop(Game: ${game.id}) // pushed to results`);
     return;
   }
-  console.log(`main:loop(Game: ${game.id}) // no winner`);
 
+  console.log(`main:loop(Game: ${game.id}) // no winner`);
   return loop(game);
 }
 

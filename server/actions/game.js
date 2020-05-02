@@ -117,21 +117,29 @@ function checkPlayersReady(game) {
 }
 
 /**
- * Checks if all players are ready
+ * Checks if all players are ready,
+ * returns promise if event came through or after timeout
  * @param {Game} game
  * @param {number} timeout
  */
 function allPlayersReady(game, timeout) {
   console.log(`actions/game:allPlayersReady(game: ${game.id}, timeout: ${timeout})`);
+  // create a new promise
   return new Promise((resolve, reject) => {
+    // create reference to event handler
     const r = () => {
       console.log("\t ALL PLAYERS READY");
       resolve();
     };
+
+    // start listening for an "ALL_READY" event
     game.ready.once("ALL_READY", r);
+
+    // start the timeout also
     setTimeout(() => {
       console.log(`\t TIMEOUT: ${timeout}`);
-      game.ready.removeListener("ALL_READY", r);
+      // remove the event listener, since we didn't get it in time
+      game.ready.off("ALL_READY", r);
       resolve();
     }, timeout);
   });
@@ -149,10 +157,25 @@ function hasWinner(game) {
 /**
  * Pushes the current game state to room
  * @param {Game} game
+ * @param {string} event
+ * @param {Object} data
  */
-function messageRoom(game) {
+function messageRoom(game, event, data) {
   console.log(`actions/game:messageRoom(game: ${game.id})`);
-  game.room.emit("update", { game });
+  game.room.emit(event, data);
+}
+
+/**
+ * send message directly to a player
+ * @param {Player} player
+ * @param {string} event
+ * @param {Object} data
+ */
+function messagePlayer(player, event, data) {
+  console.log(
+    `actions/game:messagePlayer(player: ${player.name}, event: ${event}, game: ${game.id})`
+  );
+  player.socket.emit(event, data);
 }
 
 module.exports = {
@@ -169,5 +192,6 @@ module.exports = {
   playerIsHost,
   pushRoomToState,
   hasWinner,
-  messageRoom
+  messageRoom,
+  messagePlayer
 };
