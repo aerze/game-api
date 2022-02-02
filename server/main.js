@@ -16,10 +16,9 @@ const CLIENT = {
  * @param {{ lobbyName: string, playerName: string }} data
  * @param {function} ack
  */
-function handleCreateGame(socket, { lobbyName, playerName }, ack) {
-  console.log(
-    `main:handleCreateGame(Socket: ${socket.id}, { lobbyName: ${lobbyName}, playerName: ${playerName}})`
-  );
+function handleCreateGame(socket, { lobbyName, playerName }) {
+  console.group("\ncreating game");
+  // console.log(`args lobbyName: ${lobbyName} playerName: ${playerName}`);
 
   const player = PlayerActions.createPlayer(playerName, socket);
   const game = GameActions.createGame(lobbyName, socket);
@@ -27,7 +26,7 @@ function handleCreateGame(socket, { lobbyName, playerName }, ack) {
   GameActions.addPlayerToGame(game, player);
 
   GameActions.messagePlayer(player, "GAME_CREATED", { game, player });
-  return ack({ game, player });
+  console.groupEnd();
 }
 
 /**
@@ -36,16 +35,17 @@ function handleCreateGame(socket, { lobbyName, playerName }, ack) {
  * @param {{ gameId: string, playerName: string }} data
  * @param {function} ack
  */
-function handleJoinGame(socket, { gameId, playerName }, ack) {
-  console.log(
-    `main:handleJoinGame(Socket: ${socket.id}, {gameId: ${gameId}, playerName: ${playerName}})`
-  );
+function handleJoinGame(socket, { gameId, playerName }) {
+  console.group(`\njoining game`);
+  // console.log(`args gameId: ${gameId} playerName: ${playerName}`);
 
   const player = PlayerActions.createPlayer(playerName, socket);
   const game = GameActions.findGameById(gameId);
+  if (!game) throw Error("GAME NOT FOUND");
   GameActions.addPlayerToGame(game, player);
   GameActions.messageRoom(game, "PLAYER_JOINED", { game });
   GameActions.messagePlayer(player, "GAME_JOINED", { player });
+  console.groupEnd();
 }
 
 /**
@@ -54,11 +54,14 @@ function handleJoinGame(socket, { gameId, playerName }, ack) {
  * @param {function} ack
  */
 function handlePlayerReady({ gameId, playerId }, ack) {
-  console.log(`main:handlePlayerReady({gameId: ${gameId}, playerId: ${playerId}})`);
+  // console.group(`\nsetting player to ready`);
+  // console.log(`args gameId: ${gameId} playerId: ${playerId}`);
   const game = GameActions.findGameById(gameId);
   const player = GameActions.findPlayerInGame(game, playerId);
   GameActions.setPlayerAsReady(player);
+  GameActions.checkPlayersReady(game);
   GameActions.messageRoom(game, "PLAYER_IS_READY", { game });
+  // console.groupEnd();
 }
 
 /**
@@ -67,13 +70,14 @@ function handlePlayerReady({ gameId, playerId }, ack) {
  * @param {function} ack
  */
 function handlePlayerScore({ gameId, playerId, score }, ack) {
-  console.log(
-    `main:handlePlayerScore({gameId: ${gameId}, playerId: ${playerId}, score: ${score}})`
-  );
+  // console.log(
+  //   `main:handlePlayerScore({gameId: ${gameId}, playerId: ${playerId}, score: ${score}})`
+  // );
   const game = GameActions.findGameById(gameId);
   const player = GameActions.findPlayerInGame(game, playerId);
   GameActions.addPlayerScore(player, score);
   GameActions.setPlayerAsReady(player);
+  GameActions.checkPlayersReady(game);
   GameActions.messageRoom(game, "SET_PLAYER_SCORE");
 }
 
@@ -83,10 +87,12 @@ function handlePlayerScore({ gameId, playerId, score }, ack) {
  * @param {function} ack
  */
 function handleStartGame({ gameId, playerId }) {
-  console.log(`main:handleStartGame({gameId: ${gameId}, playerId: ${playerId}})`);
+  console.group(`\nstarting game`);
+  // console.log(`args gameId: ${gameId} playerId: ${playerId}`);
   const game = GameActions.findGameById(gameId);
   const player = GameActions.findPlayerInGame(game, playerId);
 
+  console.groupEnd();
   if (GameActions.playerIsHost(game, player)) {
     loop(game);
   }
@@ -97,33 +103,37 @@ function handleStartGame({ gameId, playerId }) {
  * @param {Game} game
  */
 async function loop(game) {
-  console.log(`main:loop(Game: ${game.id})`);
+  console.group(`\n${game.displayName} loop start`);
   GameActions.pushRoomToState(game, "SCORE");
   GameActions.setAllPlayersUnready(game);
   GameActions.messageRoom(game, "MOVE_TO_SCOREBOARD", { game });
-  console.log(`main:loop(Game: ${game.id}) // pushed to SCORE, starting timeout`);
 
-  await GameActions.allPlayersReady(game, 5 * 1000);
-  console.log(`main:loop(Game: ${game.id}) // all players ready`);
+  const SCORE_TIMEOUT = 5 * 60 * 1000;
+  await GameActions.allPlayersReady(game, SCORE_TIMEOUT);
+  console.log(`starting mini game in ${game.displayName}`);
 
-  GameActions.pushRoomToState(game, "GAME");
+  GameActions.pushRoomToState(game, "MINI_GAME");
   GameActions.setAllPlayersUnready(game);
   GameActions.messageRoom(game, "MOVE_TO_GAME", { game });
-  console.log(`main:loop(Game: ${game.id}) // pushed to GAME, waiting for scores`);
 
-  await GameActions.allPlayersReady(game, 30 * 1000);
-  console.log(`main:loop(Game: ${game.id}) // all players scores in`);
+  const GAME_TIMEOUT = 5 * 60 * 1000;
+  await GameActions.allPlayersReady(game, GAME_TIMEOUT);
+  console.log(`ending mini game in ${game.displayName}`);
 
   if (GameActions.hasWinner(game)) {
-    console.log(`main:loop(Game: ${game.id}) // has winner`);
-
+    console.log(`${game.displayName} has a winner`);
     GameActions.pushRoomToState(game, "RESULTS");
     GameActions.messageRoom(game, "MOVE_TO_RESULTS", { game });
-    console.log(`main:loop(Game: ${game.id}) // pushed to results`);
+    const winners = game.players.filter((p) => p.score >= 10).map((p) => p.displayName);
+    const multipleWinners = winners.length > 1;
+    console.log(`The winner${multipleWinners ? "s are" : " is"} ${winners.join(" and ")}`);
+
+    console.groupEnd();
     return;
   }
 
   console.log(`main:loop(Game: ${game.id}) // no winner`);
+  console.groupEnd();
   return loop(game);
 }
 
@@ -132,7 +142,7 @@ async function loop(game) {
  * @param {SocketIO.Socket} socket
  */
 function handleSocketConnection(socket) {
-  console.log(`main:(Socket: ${socket.id})`);
+  console.log(`socket connection established: ${socket.id}`);
 
   socket.on(CLIENT.CREATE_GAME, (data, ack) => handleCreateGame(socket, data, ack));
 
@@ -143,8 +153,6 @@ function handleSocketConnection(socket) {
   socket.on(CLIENT.PLAYER_SCORE, handlePlayerScore);
 
   socket.on(CLIENT.START_GAME, handleStartGame);
-
-  socket.emit("test");
 }
 
 module.exports = handleSocketConnection;

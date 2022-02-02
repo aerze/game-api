@@ -6,12 +6,13 @@ class Player {
    * @param {SocketIO.Socket} socket
    */
   constructor(name, socket) {
-    console.log(`models/player:constructor()`);
     this.id = shortId.generate();
     this.name = name;
+    this.displayName = `👩‍💻${this.name}`;
     this.ready = false;
     this.score = 0;
     this.socket = socket;
+    // console.log(`created new player (${this.id})`);
   }
 
   toJSON() {

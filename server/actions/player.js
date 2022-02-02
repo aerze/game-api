@@ -7,8 +7,11 @@ const Player = require("../models/player");
  * @param {SocketIO.Socket} socket
  */
 function createPlayer(name, socket) {
-  console.log(`actions/player:createPlayer(name: ${name}, socket: ${socket.id})`);
-  return new Player(name, socket);
+  // console.group(`creating player named ${name} with socket ${socket.id}`);
+  const player = new Player(name, socket);
+  // console.groupEnd();
+  console.log(`created new player ${player.displayName} (${player.id})`);
+  return player;
 }
 
 module.exports = {

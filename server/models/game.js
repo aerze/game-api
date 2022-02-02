@@ -8,9 +8,11 @@ class Game {
    * @param {SocketIO.Socket} socket
    */
   constructor(name, socket) {
-    console.log(`models/game:constructor()`);
     this.id = shortId.generate();
+
     this.name = name;
+
+    this.displayName = `🕹 ${this.name}`;
 
     /** @type {Player} */
     this.host = null;
@@ -27,6 +29,8 @@ class Game {
     this.room = socket.server.to(this.id);
 
     this.ready = new EventEmitter();
+
+    // console.log(`created new game (${this.id})`);
   }
 
   toJSON() {
