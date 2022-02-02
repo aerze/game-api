@@ -1,20 +1,19 @@
-const http = require("http");
-const socketio = require("socket.io");
-const morgan = require("morgan");
-const express = require("express");
-const bodyParser = require("body-parser");
-
-const socketHandler = require("./main");
 const path = require("path");
+const http = require("http");
+const Socketio = require("socket.io");
+const express = require("express");
+const morgan = require("morgan");
+const bodyParser = require("body-parser");
+const handleSocketConnection = require("./main");
 
 const app = express();
 const server = http.createServer(app);
-const io = socketio(server);
+const io = new Socketio.Server(server);
 
 const PATH_TO_CLIENT_BUILD = path.resolve(path.join(__dirname, "../../mobile-mayhem-client/dist/"));
 console.log(PATH_TO_CLIENT_BUILD);
 
-io.on("connection", socketHandler);
+io.on("connection", handleSocketConnection);
 
 app.use(morgan("dev"));
 app.use(bodyParser.json());

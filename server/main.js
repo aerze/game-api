@@ -27,6 +27,7 @@ function handleCreateGame(socket, { lobbyName, playerName }, ack) {
   GameActions.addPlayerToGame(game, player);
 
   GameActions.messagePlayer(player, "GAME_CREATED", { game, player });
+  return ack({ game, player });
 }
 
 /**
@@ -131,7 +132,7 @@ async function loop(game) {
  * @param {SocketIO.Socket} socket
  */
 function handleSocketConnection(socket) {
-  console.log(`main:handleSocketConnection(Socket: ${socket.id})`);
+  console.log(`main:(Socket: ${socket.id})`);
 
   socket.on(CLIENT.CREATE_GAME, (data, ack) => handleCreateGame(socket, data, ack));
 
@@ -142,6 +143,8 @@ function handleSocketConnection(socket) {
   socket.on(CLIENT.PLAYER_SCORE, handlePlayerScore);
 
   socket.on(CLIENT.START_GAME, handleStartGame);
+
+  socket.emit("test");
 }
 
 module.exports = handleSocketConnection;

@@ -53,7 +53,7 @@ function addPlayerToGame(game, player) {
  */
 function findPlayerInGame(game, playerId) {
   console.log(`actions/game:findPlayerInGame(game: ${game.id}, playerId: ${playerId})`);
-  return game.players.find(p => p.id === playerId);
+  return game.players.find((p) => p.id === playerId);
 }
 
 /**
@@ -81,7 +81,7 @@ function setPlayerAsReady(player) {
  */
 function setAllPlayersUnready(game) {
   console.log(`actions/game:setAllPlayersUnready(game: ${game.id})`);
-  game.players.forEach(p => (p.ready = false));
+  game.players.forEach((p) => (p.ready = false));
 }
 
 /**
@@ -110,7 +110,7 @@ function pushRoomToState(game, state) {
  */
 function checkPlayersReady(game) {
   console.log(`actions/game:checkPlayersReady(game: ${game.id})`);
-  const allReady = game.players.every(p => p.ready);
+  const allReady = game.players.every((p) => p.ready);
   console.log(`\t allReady: ${allReady}`);
   if (allReady) game.ready.emit("ALL_READY");
   return allReady;
@@ -151,7 +151,7 @@ function allPlayersReady(game, timeout) {
  */
 function hasWinner(game) {
   console.log(`actions/game:hasWinner(game: ${game.id})`);
-  return !game.players.every(p => p.score < 10);
+  return !game.players.every((p) => p.score < 10);
 }
 
 /**
@@ -173,7 +173,9 @@ function messageRoom(game, event, data) {
  */
 function messagePlayer(player, event, data) {
   console.log(
-    `actions/game:messagePlayer(player: ${player.name}, event: ${event}, game: ${game.id})`
+    `actions/game:messagePlayer(player: ${player.name}, event: ${event}, game: ${
+      data?.game?.id ?? "none"
+    })`
   );
   player.socket.emit(event, data);
 }
